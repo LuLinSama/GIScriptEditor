@@ -1946,6 +1946,7 @@ private:
 		prev = &ep.Create(graph);
 		entrypoint = prev;
 		AutoLayout(prev);
+		flow = 0;
 		for (auto& a : parameters)
 		{
 			unsigned pin = 0;
@@ -1966,6 +1967,7 @@ private:
 		function_header.in_function = true;
 		if (prev) { x = 0; y += 800; }
 		graph.AddComment(std::format("function {}", name), x - 400, y);
+		flow = 0;
 		auto& [dp, dr, de] = function_storage.map[name];
 		for (auto& p : parameters)
 		{

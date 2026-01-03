@@ -303,7 +303,7 @@ public:
 		Register("QueryEntitybyGUID", { Entity() }, { Guid() }, QueryEntitybyGUID, true);
 		Register("QueryGUIDbyEntity", { Guid() }, { Entity() }, QueryGUIDbyEntity, true);
 		Register("SettleStage", {}, { Bool() }, SettleStage);
-		Register("StartTimer", {}, { Entity(),String(),Bool(),List(Float()),Guid() }, StartTimer);
+		Register("StartTimer", {}, { Entity(),String(),Bool(),List(Float()) }, StartTimer);
 		Register("PauseTimer", {}, { Entity(),String() }, PauseTimer);
 		Register("ResumeTimer", {}, { Entity(),String() }, ResumeTimer);
 		Register("StopTimer", {}, { Entity(),String() }, StopTimer);
@@ -684,7 +684,7 @@ struct ExprContent
 	int pin{};
 	mutable bool branch = false;
 	mutable std::vector<unsigned> branches;
-	std::variant<std::monostate, int64_t, float, std::string> literal;
+	std::variant<std::monostate, int64_t, float, std::string, bool> literal;
 	std::variant<std::monostate, LValueContext, FunctionRegistry::Ref, std::vector<std::shared_ptr<ExprContent>>, std::string> extra;
 
 	ExprContent() = default;
@@ -696,6 +696,7 @@ struct ExprContent
 		case 1: retType.type = Script::VarType::Int; break;
 		case 2: retType.type = Script::VarType::Float; break;
 		case 3: retType.type = Script::VarType::String; break;
+		case 4: retType.type = Script::VarType::Bool; break;
 		}
 	}
 
@@ -723,6 +724,7 @@ struct ExprContent
 		{
 		case 1: return static_cast<T>(std::get<int64_t>(literal));
 		case 2: return static_cast<T>(std::get<float>(literal));
+		case 4: return static_cast<T>(std::get<bool>(literal));
 		default: throw std::runtime_error("Can't convert literal");
 		}
 	}
@@ -2613,6 +2615,10 @@ private:
 			case 3:
 				if (!proto.Contains(pin)) call->Set(pin, std::get<std::string>(arg->literal));
 				else call->Fill(pin, std::get<std::string>(arg->literal));
+				break;
+			case 4:
+				if (!proto.Contains(pin)) call->Set(pin, Enum{ arg->Get<bool>() }, ServerVarType::Boolean);
+				else call->Fill(pin, arg->Get<int64_t>());
 				break;
 			}
 			pin++;

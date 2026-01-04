@@ -27,6 +27,15 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 	std::wstring pp, sd;
 	Base::Window window("GIScriptEditor");
 	{
+		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"当前版本：1.0.2", 160));
+		t.anchor = Anchor::Top;
+		t.y = 40;
+		t.SetOriginCenter();
+		t.SetTextSize(18);
+		t.SetStyle(window.Renderer().Style().Color(0.4, 1, 0.4, 1).Build());
+		t.SetStyle(window.Renderer().Style().Color(1, 1, 0, 1).Dilate().Build(), 1);
+	}
+	{
 		auto& t = window.AddWidget(std::make_unique<TextBox>(window.Renderer(), L"存档路径：", 160));
 		t.anchor = Anchor::Center;
 		t.x = -300;
@@ -142,7 +151,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		b.anchor = Anchor::RightBottom;
 		b.x = -60;
 		b.y = -60;
-		b.SetClickEvent([&](auto&) { ShellExecuteW(nullptr, L"open", L"https://space.bilibili.com/243670887", nullptr, nullptr, SW_SHOWNORMAL); });
+		b.SetClickEvent([&](auto&) { ShellExecuteW(nullptr, L"open", L"https://www.bilibili.com/video/BV1kCiBBPEWu", nullptr, nullptr, SW_SHOWNORMAL); });
 	}
 	{
 		auto [data, size] = Utils::GetResource(IDB_PNG2, L"png");

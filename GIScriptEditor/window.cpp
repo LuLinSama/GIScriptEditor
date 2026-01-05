@@ -29,7 +29,7 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		return 0;
 	case WM_PAINT:
 		renderer.BeginRender();
-		for (auto& w : widgets) w->Render(renderer);
+		for (auto& w : widgets) if (w->visible) w->Render(renderer);
 		renderer.EndRender();
 		return 0;
 	case WM_SIZE:
@@ -49,7 +49,7 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		auto hit = true;
 		for (auto& w : widgets | std::views::reverse)
 		{
-			if (hit && w->HitTest(renderer, x, y))
+			if (hit && w->visible && w->HitTest(renderer, x, y))
 			{
 				hit = false;
 				if (hovered != w.get())
@@ -57,11 +57,8 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					hovered = w.get();
 					w->OnMouseEnter();
 				}
-				else
-				{
-					auto [px, py] = w->TransformLocal(renderer, x, y);
-					w->OnMouseMove(px, py);
-				}
+				auto [px, py] = w->TransformLocal(renderer, x, y);
+				w->OnMouseMove(px, py);
 			}
 			else if (old == w.get()) w->OnMouseLeave();
 		}
@@ -69,6 +66,11 @@ LRESULT Window::ProcMsg(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		break;
 	}
 	case WM_LBUTTONDOWN:
+		if (pop_widget && hovered != pop_widget)
+		{
+			pop_widget->visible = false;
+			pop_widget = nullptr;
+		}
 		if (hovered)
 		{
 			auto [px, py] = hovered->TransformLocal(renderer, LOWORD(lparam), HIWORD(lparam));
@@ -106,7 +108,7 @@ int Window::Run()
 
 Utils::Future<void> Window::Dialog(const std::wstring& title, const std::wstring& msg, UINT type) const
 {
-	return Utils::Future(std::async(std::launch::deferred, [=] {MessageBoxW(handle, msg.data(), title.data(), type); }));
+	return Utils::Future(std::async(std::launch::deferred, [=] { MessageBoxW(handle, msg.data(), title.data(), type); }));
 }
 
 Utils::Future<std::wstring> Window::OpenFile(const std::vector<std::pair<std::wstring, std::wstring>>& filters) const
@@ -129,4 +131,17 @@ Utils::Future<std::wstring> Window::SaveFile(const std::wstring& default_ext, co
 			CoUninitialize();
 			return ret;
 		}));
+}
+
+void Window::Flush() const
+{
+	POINT pt;
+	RECT rect;
+	GetCursorPos(&pt);
+	GetWindowRect(handle, &rect);
+	if (PtInRect(&rect, pt))
+	{
+		ScreenToClient(handle, &pt);
+		PostMessageW(handle, WM_MOUSEMOVE, 0, MAKELPARAM(pt.x, pt.y));
+	}
 }

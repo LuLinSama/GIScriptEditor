@@ -35,6 +35,7 @@ export namespace Editor::UI
 		float x, y;
 		float width, height;
 		Anchor anchor;
+		bool visible;
 
 		struct
 		{
@@ -118,5 +119,26 @@ export namespace Editor::UI
 	public:
 		explicit Rectangle(const Render::Renderer& renderer, float width = 120, float height = 60);
 		void Render(const Render::Renderer& renderer) override;
+	};
+
+	class PopMenu : public Widget
+	{
+		std::vector<ComPtr<IDWriteTextLayout>> items;
+		ComPtr<IDWriteTextLayout> title;
+		Render::RenderStyle background, fill, stroke, highlight;
+		float item_width, item_height;
+		int hovered = -1;
+		std::function<void(PopMenu& menu, int index)> clicked;
+	public:
+		PopMenu(const Render::Renderer& renderer, const std::vector<std::wstring>& items, float item_width, float item_height);
+		void Render(const Render::Renderer& renderer) override;
+		void OnMouseLeave() override;
+		void OnMouseMove(float x, float y) override;
+		void OnMouseClick(float x, float y) override;
+		void SetTextSize(float size) const;
+		void SetStyle(Render::RenderStyle style, int slot) override;
+		void SetTitle(const Render::Renderer& renderer, const std::wstring& text, float size);
+
+		void SetClickEvent(decltype(clicked) event) { clicked = std::move(event); }
 	};
 }

@@ -59,6 +59,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		b.SetClickEvent([&](auto&)->Utils::Task
 			{
 				auto path = co_await window.OpenFile({ {L"存档文件(*.gil)",L"*.gil"},{L"所有文件(*.*)",L"*.*"} });
+				window.Flush();
 				if (path.empty()) co_return;
 				project_path->SetText(window.Renderer(), path);
 				project_path->SetTextSize(22);
@@ -74,6 +75,7 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		b.SetClickEvent([&](auto&)->Utils::Task
 			{
 				auto path = co_await window.OpenFile({});
+				window.Flush();
 				if (path.empty()) co_return;
 				script_dir->SetText(window.Renderer(), path);
 				script_dir->SetTextSize(22);
@@ -168,6 +170,38 @@ int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int n
 		b.x = -120;
 		b.y = -60;
 		b.SetClickEvent([&](auto&) { ShellExecuteW(nullptr, L"open", L"https://github.com/hackermdch/GIScriptEditor", nullptr, nullptr, SW_SHOWNORMAL); });
+	}
+	{
+		auto& b = window.AddWidget(std::make_unique<Button>(window.Renderer(), L"☰", 40, 40));
+		b.anchor = Anchor::LeftBottom;
+		b.y = -40;
+		b.SetStyle(window.Renderer().Style().Color(0.8, 0.8, 0.8, 0.3).Build());
+		b.SetStyle(window.Renderer().Style().Color(1, 0.8, 0.6, 0.5).Build(), 2);
+		b.SetStyle(window.Renderer().Style().Color(0.3, 0.3, 0.3, 1).Line(3).Build(), 3);
+		b.SetStyle(window.Renderer().Style().Color(0.8, 0.8, 0.8, 0.8).Build(), 4);
+		b.SetTextSize(24);
+		auto& pm = window.AddWidget(std::make_unique<PopMenu>(window.Renderer(), std::vector<std::wstring>{L"复合节点引用查找", L"更多……"}, 160, 30));
+		pm.anchor = Anchor::LeftBottom;
+		pm.y = -60;
+		pm.SetTextSize(16);
+		pm.SetTitle(window.Renderer(), L"额外工具：", 25);
+		pm.SetClickEvent([&](auto&, int index)->Utils::Task
+			{
+				switch (index)
+				{
+				case 0:
+					co_await window.Dialog(L"开发中", L"请等待后续更新", MB_ICONINFORMATION);
+					break;
+				case 1:
+					co_await window.Dialog(L"想不出来", L"这里还没有东西哦", MB_ICONINFORMATION);
+					break;
+				}
+			});
+		b.SetClickEvent([&](auto&)
+			{
+				window.SetPop(pm);
+				window.Flush();
+			});
 	}
 	return window.Run();
 }

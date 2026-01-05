@@ -46,7 +46,7 @@ float Widget::CalcY(const Renderer& renderer) const
 	return 0;
 }
 
-Widget::Widget(float x, float y, float width, float height, Anchor anchor) : interactive(true), x(x), y(y), width(width), height(height), anchor(anchor), origin()
+Widget::Widget(float x, float y, float width, float height, Anchor anchor) : interactive(true), x(x), y(y), width(width), height(height), anchor(anchor), visible(true), origin()
 {
 }
 
@@ -260,6 +260,7 @@ void ImageButton::SetStyle(RenderStyle style, int slot)
 
 StaticShape::StaticShape(float width, float height) : Widget(0, 0, width, height), fill(), stroke()
 {
+	interactive = false;
 }
 
 void StaticShape::SetStyle(RenderStyle style, int slot)
@@ -288,4 +289,81 @@ void Rectangle::Render(const Renderer& renderer)
 	D2D1_RECT_F collider{ x,y,width,height }, rect{ x,y,x + width,y + height };
 	ctx->FillRectangle(rect, fill.Brush(collider));
 	ctx->DrawRectangle(rect, stroke.Brush(collider), stroke.stroke_width, stroke.Stroke());
+}
+
+static std::vector<ComPtr<IDWriteTextLayout>> MakePopItems(const Renderer& renderer, const std::vector<std::wstring>& items)
+{
+	std::vector<ComPtr<IDWriteTextLayout>> ts;
+	for (auto& s : items) renderer.DWrite()->CreateTextLayout(s.data(), s.size(), renderer.DefaultFormat(), 4600, 40, &ts.emplace_back());
+	return ts;
+}
+
+PopMenu::PopMenu(const Renderer& renderer, const std::vector<std::wstring>& items, float item_width, float item_height) : Widget(0, 0, item_width, item_height* items.size()), items(MakePopItems(renderer, items)), item_width(item_width), item_height(item_height)
+{
+	visible = false;
+	background = renderer.Style().Color(0.8, 0.8, 0.8, 0.6).Build();
+	fill = renderer.Style().Color(0, 0, 0, 1).Build();
+	stroke = renderer.Style().Color(0.3, 0.3, 0.3, 1).Line(3).Build();
+	highlight = renderer.Style().Color(0.6, 1, 1, 1).Build();
+}
+
+void PopMenu::Render(const Renderer& renderer)
+{
+	auto ctx = renderer.D2DCtx();
+	auto x = CalcX(renderer), y = CalcY(renderer);
+	auto y1 = y;
+	int i = 0;
+	if (title)
+	{
+		DWRITE_TEXT_METRICS metrics;
+		title->GetMetrics(&metrics);
+		D2D1_RECT_F collider{ x,y - metrics.height,item_width,metrics.height };
+		D2D1_POINT_2F p{ x + (item_width - metrics.width) / 2, y - metrics.height };
+		ctx->DrawTextLayout(p, title.Get(), fill.Brush(collider));
+	}
+	for (auto& it : items)
+	{
+		D2D1_RECT_F collider{ x,y1,item_width,item_height }, rect{ x,y1,x + item_width,y1 + item_height };
+		ctx->FillRectangle(rect, i == hovered ? highlight.Brush(collider) : background.Brush(collider));
+		ctx->DrawRectangle(rect, stroke.Brush(collider), stroke.stroke_width, stroke.Stroke());
+		DWRITE_TEXT_METRICS metrics;
+		it->GetMetrics(&metrics);
+		D2D1_POINT_2F p{ x + (item_width - metrics.width) / 2, y1 + (item_height - metrics.height) / 2 };
+		ctx->DrawTextLayout(p, it.Get(), fill.Brush(collider));
+		y1 += item_height;
+		i++;
+	}
+}
+
+void PopMenu::OnMouseLeave()
+{
+	hovered = -1;
+}
+
+void PopMenu::OnMouseMove(float x, float y)
+{
+	hovered = y / item_height;
+}
+
+void PopMenu::OnMouseClick(float x, float y)
+{
+	if (!clicked) return;
+	hovered = y / item_height;
+	if (hovered >= 0 && hovered < items.size()) clicked(*this, hovered);
+}
+
+void PopMenu::SetTextSize(float size) const
+{
+	for (auto& i : items) i->SetFontSize(size, { 0,~0u });
+	for (auto& i : items) i->SetFontWeight(DWRITE_FONT_WEIGHT_BOLD, { 0,~0u });
+}
+
+void PopMenu::SetStyle(RenderStyle style, int slot)
+{
+}
+
+void PopMenu::SetTitle(const Renderer& renderer, const std::wstring& text, float size)
+{
+	renderer.DWrite()->CreateTextLayout(text.data(), text.size(), renderer.DefaultFormat(), 4600, 40, &title);
+	title->SetFontSize(size, { 0,~0u });
 }
